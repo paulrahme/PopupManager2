@@ -10,11 +10,14 @@ using UnityEditor;
 public class ButtonWithAnim_Editor : Editor
 {
 	GUIStyle labelStyle = new GUIStyle();
+	GUIContent interactableLabel = new GUIContent("Interactable");
 	GUIContent transformLabel = new GUIContent("Transform To Animate");
 	GUIContent animTypeLabel = new GUIContent("Animation Type");
 	GUIContent animCurveLabel = new GUIContent("Anim Curve");
 	GUIContent animDurationLabel = new GUIContent("Anim Duration");
 	GUIContent moveDistanceLabel = new GUIContent("Move Distance");
+	GUIContent disableCanvasGroupLabel = new GUIContent("Canvas Group To Alpha Out");
+	GUIContent disableAlphaLabel = new GUIContent("Alpha Amout");
 	ButtonWithAnim button;
 
 	public override void OnInspectorGUI()
@@ -28,6 +31,13 @@ public class ButtonWithAnim_Editor : Editor
 
 		EditorGUILayout.Space();
 
+		EditorGUILayout.LabelField("Button", labelStyle);
+		bool interactable = EditorGUILayout.Toggle(interactableLabel, button.interactable);
+		if (interactable != button.interactable)	// Avoids it refreshing on every frame even when it hasn't changed
+			button.interactable = interactable;			
+
+		EditorGUILayout.Space();
+
 		EditorGUILayout.LabelField("Hierarchy", labelStyle);
 		button.transformToAnimate = (RectTransform)EditorGUILayout.ObjectField(transformLabel, button.transformToAnimate, typeof(RectTransform), true);
 
@@ -35,19 +45,45 @@ public class ButtonWithAnim_Editor : Editor
 
 		EditorGUILayout.LabelField("Animation", labelStyle);
 		button.animationType = (ButtonWithAnim.AnimationTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.animationType);
-		if (button.animationType == ButtonWithAnim.AnimationTypes.Scale)
-			button.animCurveScale = EditorGUILayout.CurveField(animCurveLabel, button.animCurveScale);
-		else
-			button.animCurveMove = EditorGUILayout.CurveField(animCurveLabel, button.animCurveMove);
+		switch (button.animationType)
+		{
+			case ButtonWithAnim.AnimationTypes.Scale:
+				button.animCurveScale = EditorGUILayout.CurveField(animCurveLabel, button.animCurveScale);
+				break;
+
+			case ButtonWithAnim.AnimationTypes.MoveUpDown:
+			case ButtonWithAnim.AnimationTypes.MoveLeftRight:
+				button.animCurveMove = EditorGUILayout.CurveField(animCurveLabel, button.animCurveMove);
+				break;
+		}
 		button.animDuration = EditorGUILayout.FloatField(animDurationLabel, button.animDuration);
 		if ((button.animationType == ButtonWithAnim.AnimationTypes.MoveLeftRight) || (button.animationType == ButtonWithAnim.AnimationTypes.MoveUpDown))
 			button.moveDistance = EditorGUILayout.FloatField(moveDistanceLabel, button.moveDistance);
 		EditorGUILayout.Space();
 
+		EditorGUILayout.LabelField("Disabled Effect", labelStyle);
+		button.disableType = (ButtonWithAnim.DisableTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.disableType);
+		switch (button.disableType)
+		{
+			case ButtonWithAnim.DisableTypes.CanvasGroupAlpha:
+				button.disableCanvasGroup = (CanvasGroup)EditorGUILayout.ObjectField(disableCanvasGroupLabel, button.disableCanvasGroup, typeof(CanvasGroup), true);
+				button.disableCanvasGroupAlpha = EditorGUILayout.FloatField(disableAlphaLabel, button.disableCanvasGroupAlpha);
+				break;
+
+			case ButtonWithAnim.DisableTypes.HierarchySwap:
+				SerializedProperty enableWhenInteractable = serializedObject.FindProperty("enableWhenInteractable");
+				EditorGUILayout.PropertyField(enableWhenInteractable, true);
+				SerializedProperty enableWhenNotInteractable = serializedObject.FindProperty("enableWhenNotInteractable");
+				EditorGUILayout.PropertyField(enableWhenNotInteractable, true);
+				break;
+		}
+
+
 		SerializedProperty onAnimStart = serializedObject.FindProperty("onAnimStart");
 		EditorGUILayout.PropertyField(onAnimStart);
 		SerializedProperty onAnimFinish = serializedObject.FindProperty("onAnimFinish");
 		EditorGUILayout.PropertyField(onAnimFinish);
+
 		if (GUI.changed)
 			serializedObject.ApplyModifiedProperties();
 	}
@@ -57,6 +93,7 @@ public class ButtonWithAnim_Editor : Editor
 public class ButtonWithAnim : Button
 {
 	public enum AnimationTypes { Scale, MoveUpDown, MoveLeftRight };
+	public enum DisableTypes { CanvasGroupAlpha, HierarchySwap };
 	static readonly Vector2 vec2Up = Vector2.up;
 	static readonly Vector2 vec2Right = Vector2.right;
 
@@ -72,6 +109,13 @@ public class ButtonWithAnim : Button
 	public float animDuration = 0.2f;
 	public float moveDistance = 10f;
 
+	[Header("Disabling")]
+	public DisableTypes disableType = DisableTypes.CanvasGroupAlpha;
+	public CanvasGroup disableCanvasGroup = null;
+	[Range(0, 1)] public float disableCanvasGroupAlpha = 0.5f;
+	public GameObject[] enableWhenInteractable = null;
+	public GameObject[] enableWhenNotInteractable = null;
+
 	[Header("Events")]
 	public UnityEvent onAnimStart = null;
 	public UnityEvent onAnimFinish = null;
@@ -80,10 +124,40 @@ public class ButtonWithAnim : Button
 
 	float animSpeed;
 
+	/// <summary> Wrapper for Button's "interactable" property, which also refreshes elements </summary>
+	public new bool interactable
+	{
+		get { return base.interactable; }
+		set
+		{
+			base.interactable = value;
+			RefreshInteractable(value);
+		}
+	}
+
 	/// <summary> Called when object/script is disabled in the hierarchy </summary>
 	protected override void OnDisable()
-	{
+	{		
 		StopAllCoroutines();
+	}
+
+	/// <summary> Refreshes elements for interactable/disabled state </summary>
+	/// <param name="_interactable"> True if button's interactable, false to show disabled state </param>
+	void RefreshInteractable(bool _interactable)
+	{
+		switch (disableType)
+		{
+			case DisableTypes.CanvasGroupAlpha:
+				disableCanvasGroup.alpha = (_interactable ? 1.0f : disableCanvasGroupAlpha);
+				break;
+
+			case DisableTypes.HierarchySwap:
+				for (int i = 0; i < enableWhenInteractable.Length; ++i)
+					enableWhenInteractable[i].SetActive(_interactable);
+				for (int i = 0; i < enableWhenNotInteractable.Length; ++i)
+					enableWhenNotInteractable[i].SetActive(!_interactable);
+				break;
+		}
 	}
 
 	/// <summary> Wrapper for Button.OnPointerClick </summary>
@@ -95,6 +169,9 @@ public class ButtonWithAnim : Button
 	/// <summary> Wrapper for Button.OnClick </summary>
 	public void OnClick()
 	{
+		if (!interactable)
+			return;
+
 		if (onAnimStart != null)
 			onAnimStart.Invoke();
 

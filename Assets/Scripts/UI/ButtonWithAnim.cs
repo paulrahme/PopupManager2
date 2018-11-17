@@ -16,6 +16,7 @@ public class ButtonWithAnim_Editor : Editor
 	GUIContent animCurveLabel = new GUIContent("Anim Curve");
 	GUIContent animDurationLabel = new GUIContent("Anim Duration");
 	GUIContent moveDistanceLabel = new GUIContent("Move Distance");
+	GUIContent disableTypeLabel = new GUIContent("Disable Type");
 	GUIContent disableCanvasGroupLabel = new GUIContent("Canvas Group To Alpha Out");
 	GUIContent disableAlphaLabel = new GUIContent("Alpha Amout");
 	ButtonWithAnim button;
@@ -62,7 +63,7 @@ public class ButtonWithAnim_Editor : Editor
 		EditorGUILayout.Space();
 
 		EditorGUILayout.LabelField("Disabled Effect", labelStyle);
-		button.disableType = (ButtonWithAnim.DisableTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.disableType);
+		button.disableType = (ButtonWithAnim.DisableTypes)EditorGUILayout.EnumPopup(disableTypeLabel, button.disableType);
 		switch (button.disableType)
 		{
 			case ButtonWithAnim.DisableTypes.CanvasGroupAlpha:

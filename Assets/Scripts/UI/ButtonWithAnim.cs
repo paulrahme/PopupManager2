@@ -18,7 +18,9 @@ public class ButtonWithAnim_Editor : Editor
 	GUIContent moveDistanceLabel = new GUIContent("Move Distance");
 	GUIContent disableTypeLabel = new GUIContent("Disable Type");
 	GUIContent disableCanvasGroupLabel = new GUIContent("Canvas Group To Alpha Out");
-	GUIContent disableAlphaLabel = new GUIContent("Alpha Amout");
+	GUIContent disableAlphaLabel = new GUIContent("Alpha Amount");
+	GUIContent lockOthersDuringAnimLabel = new GUIContent("Lock Others During Anim");
+	GUIContent lockCooldownAfterAnimLabel = new GUIContent("Lock Cooldown After Anim");
 	ButtonWithAnim button;
 
 	public override void OnInspectorGUI()
@@ -39,12 +41,8 @@ public class ButtonWithAnim_Editor : Editor
 
 		EditorGUILayout.Space();
 
-		EditorGUILayout.LabelField("Hierarchy", labelStyle);
-		button.transformToAnimate = (RectTransform)EditorGUILayout.ObjectField(transformLabel, button.transformToAnimate, typeof(RectTransform), true);
-
-		EditorGUILayout.Space();
-
 		EditorGUILayout.LabelField("Animation", labelStyle);
+		button.transformToAnimate = (RectTransform)EditorGUILayout.ObjectField(transformLabel, button.transformToAnimate, typeof(RectTransform), true);
 		button.animationType = (ButtonWithAnim.AnimationTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.animationType);
 		switch (button.animationType)
 		{
@@ -60,6 +58,7 @@ public class ButtonWithAnim_Editor : Editor
 		button.animDuration = EditorGUILayout.FloatField(animDurationLabel, button.animDuration);
 		if ((button.animationType == ButtonWithAnim.AnimationTypes.MoveLeftRight) || (button.animationType == ButtonWithAnim.AnimationTypes.MoveUpDown))
 			button.moveDistance = EditorGUILayout.FloatField(moveDistanceLabel, button.moveDistance);
+
 		EditorGUILayout.Space();
 
 		EditorGUILayout.LabelField("Disabled Effect", labelStyle);
@@ -79,6 +78,12 @@ public class ButtonWithAnim_Editor : Editor
 				break;
 		}
 
+		EditorGUILayout.Space();
+
+		EditorGUILayout.LabelField("Cooldown (Locks Out Other Buttons)", labelStyle);
+
+		button.lockOtherButtonsDuringAnim = EditorGUILayout.Toggle(lockOthersDuringAnimLabel, button.lockOtherButtonsDuringAnim);
+		button.lockCooldownAfterAnim = EditorGUILayout.FloatField(lockCooldownAfterAnimLabel, button.lockCooldownAfterAnim);
 
 		SerializedProperty onAnimStart = serializedObject.FindProperty("onAnimStart");
 		EditorGUILayout.PropertyField(onAnimStart);
@@ -100,10 +105,19 @@ public class ButtonWithAnim : Button
 
 	#region Inspector variables
 
-	[Header("Hierarchy")]
-	public RectTransform transformToAnimate = null;
+	/// <summary> Wrapper for Button's "interactable" property, which also refreshes elements </summary>
+	public new bool interactable
+	{
+		get { return base.interactable; }
+		set
+		{
+			base.interactable = value;
+			RefreshInteractable(value);
+		}
+	}
 
 	[Header("Animation")]
+	public RectTransform transformToAnimate = null;
 	public AnimationTypes animationType = AnimationTypes.Scale;
 	public AnimationCurve animCurveScale = new AnimationCurve(new Keyframe(0f, 1f, 1f, 1f), new Keyframe(0.1f, 1.2f), new Keyframe(1f, 1f, -0.5f, -0.5f));
 	public AnimationCurve animCurveMove = new AnimationCurve(new Keyframe(0f, 0f, 1f, 1f), new Keyframe(0.1f, 1f), new Keyframe(1f, 0f, -0.5f, -0.5f));
@@ -121,20 +135,14 @@ public class ButtonWithAnim : Button
 	public UnityEvent onAnimStart = null;
 	public UnityEvent onAnimFinish = null;
 
+	[Header("Cooldown")]
+	public bool lockOtherButtonsDuringAnim = true;
+	public float lockCooldownAfterAnim = 0.3f;
+
 	#endregion // Inspector variables
 
 	float animSpeed;
-
-	/// <summary> Wrapper for Button's "interactable" property, which also refreshes elements </summary>
-	public new bool interactable
-	{
-		get { return base.interactable; }
-		set
-		{
-			base.interactable = value;
-			RefreshInteractable(value);
-		}
-	}
+	static float cooldownEndTime;
 
 	/// <summary> Called when object/script is disabled in the hierarchy </summary>
 	protected override void OnDisable()
@@ -170,13 +178,16 @@ public class ButtonWithAnim : Button
 	/// <summary> Wrapper for Button.OnClick </summary>
 	public void OnClick()
 	{
-		if (!interactable)
+		if (!interactable || (Time.time < cooldownEndTime))
 			return;
 
 		if (onAnimStart != null)
 			onAnimStart.Invoke();
 
 		animSpeed = 1f / animDuration;
+
+		if (lockOtherButtonsDuringAnim)
+			cooldownEndTime = Time.time + animDuration + 0.05f;
 
 		switch (animationType)
 		{
@@ -197,6 +208,8 @@ public class ButtonWithAnim : Button
 	/// <summary> Called when animation has completed </summary>
 	public void OnAnimComplete()
 	{
+		cooldownEndTime = Time.time + lockCooldownAfterAnim;
+
 		if (onAnimFinish != null)
 			onAnimFinish.Invoke();
 	}

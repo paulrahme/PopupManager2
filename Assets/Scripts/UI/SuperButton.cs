@@ -6,8 +6,8 @@ using UnityEngine.EventSystems;
 
 #if UNITY_EDITOR
 using UnityEditor;
-[CustomEditor(typeof(ButtonWithAnim))]
-public class ButtonWithAnim_Editor : Editor
+[CustomEditor(typeof(SuperButton))]
+public class SuperButton_Editor : Editor
 {
 	GUIStyle labelStyle = new GUIStyle();
 	GUIContent interactableLabel = new GUIContent("Interactable");
@@ -21,13 +21,13 @@ public class ButtonWithAnim_Editor : Editor
 	GUIContent disableAlphaLabel = new GUIContent("Alpha Amount");
 	GUIContent lockOthersDuringAnimLabel = new GUIContent("Lock Others During Anim");
 	GUIContent lockCooldownAfterAnimLabel = new GUIContent("Lock Cooldown After Anim");
-	ButtonWithAnim button;
+	SuperButton button;
 
 	public override void OnInspectorGUI()
 	{
 		if (button == null)
 		{
-			button = (ButtonWithAnim)target;
+			button = (SuperButton)target;
 			labelStyle.fontStyle = FontStyle.Bold;
 			button.transition = Selectable.Transition.None;
 		}
@@ -43,34 +43,34 @@ public class ButtonWithAnim_Editor : Editor
 
 		EditorGUILayout.LabelField("Animation", labelStyle);
 		button.transformToAnimate = (RectTransform)EditorGUILayout.ObjectField(transformLabel, button.transformToAnimate, typeof(RectTransform), true);
-		button.animationType = (ButtonWithAnim.AnimationTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.animationType);
+		button.animationType = (SuperButton.AnimationTypes)EditorGUILayout.EnumPopup(animTypeLabel, button.animationType);
 		switch (button.animationType)
 		{
-			case ButtonWithAnim.AnimationTypes.Scale:
+			case SuperButton.AnimationTypes.Scale:
 				button.animCurveScale = EditorGUILayout.CurveField(animCurveLabel, button.animCurveScale);
 				break;
 
-			case ButtonWithAnim.AnimationTypes.MoveUpDown:
-			case ButtonWithAnim.AnimationTypes.MoveLeftRight:
+			case SuperButton.AnimationTypes.MoveUpDown:
+			case SuperButton.AnimationTypes.MoveLeftRight:
 				button.animCurveMove = EditorGUILayout.CurveField(animCurveLabel, button.animCurveMove);
 				break;
 		}
 		button.animDuration = EditorGUILayout.FloatField(animDurationLabel, button.animDuration);
-		if ((button.animationType == ButtonWithAnim.AnimationTypes.MoveLeftRight) || (button.animationType == ButtonWithAnim.AnimationTypes.MoveUpDown))
+		if ((button.animationType == SuperButton.AnimationTypes.MoveLeftRight) || (button.animationType == SuperButton.AnimationTypes.MoveUpDown))
 			button.moveDistance = EditorGUILayout.FloatField(moveDistanceLabel, button.moveDistance);
 
 		EditorGUILayout.Space();
 
 		EditorGUILayout.LabelField("Disabled Effect", labelStyle);
-		button.disableType = (ButtonWithAnim.DisableTypes)EditorGUILayout.EnumPopup(disableTypeLabel, button.disableType);
+		button.disableType = (SuperButton.DisableTypes)EditorGUILayout.EnumPopup(disableTypeLabel, button.disableType);
 		switch (button.disableType)
 		{
-			case ButtonWithAnim.DisableTypes.CanvasGroupAlpha:
+			case SuperButton.DisableTypes.CanvasGroupAlpha:
 				button.disableCanvasGroup = (CanvasGroup)EditorGUILayout.ObjectField(disableCanvasGroupLabel, button.disableCanvasGroup, typeof(CanvasGroup), true);
 				button.disableCanvasGroupAlpha = EditorGUILayout.FloatField(disableAlphaLabel, button.disableCanvasGroupAlpha);
 				break;
 
-			case ButtonWithAnim.DisableTypes.HierarchySwap:
+			case SuperButton.DisableTypes.HierarchySwap:
 				SerializedProperty enableWhenInteractable = serializedObject.FindProperty("enableWhenInteractable");
 				EditorGUILayout.PropertyField(enableWhenInteractable, true);
 				SerializedProperty enableWhenNotInteractable = serializedObject.FindProperty("enableWhenNotInteractable");
@@ -96,7 +96,7 @@ public class ButtonWithAnim_Editor : Editor
 }
 #endif
 
-public class ButtonWithAnim : Button
+public class SuperButton : Button
 {
 	public enum AnimationTypes { Scale, MoveUpDown, MoveLeftRight };
 	public enum DisableTypes { CanvasGroupAlpha, HierarchySwap };

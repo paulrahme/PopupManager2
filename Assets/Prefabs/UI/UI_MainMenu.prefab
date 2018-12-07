@@ -97,6 +97,7 @@ GameObject:
   - component: {fileID: 222284034588041754}
   - component: {fileID: 114035627490254834}
   - component: {fileID: 114607223972334702}
+  - component: {fileID: 225892791286178404}
   m_Layer: 5
   m_Name: Btn_Quit
   m_TagString: Untagged
@@ -323,7 +324,7 @@ MonoBehaviour:
     m_TypeName: UnityEngine.UI.Button+ButtonClickedEvent, UnityEngine.UI, Version=1.0.0.0,
       Culture=neutral, PublicKeyToken=null
   transformToAnimate: {fileID: 224549351853204254}
-  animationType: 2
+  animationType: 3
   animCurveScale:
     serializedVersion: 2
     m_Curve:
@@ -362,7 +363,7 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0
+      value: 0.014953613
       inSlope: 1
       outSlope: 1
       tangentMode: 0
@@ -371,7 +372,7 @@ MonoBehaviour:
       outWeight: 0
     - serializedVersion: 3
       time: 0.1
-      value: 1
+      value: 1.0149536
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -380,7 +381,7 @@ MonoBehaviour:
       outWeight: 0
     - serializedVersion: 3
       time: 0.3
-      value: -1.0000105
+      value: -0.9850569
       inSlope: -0.038903333
       outSlope: -0.038903333
       tangentMode: 0
@@ -388,8 +389,17 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.2258085
     - serializedVersion: 3
+      time: 0.6917841
+      value: 0.49337053
+      inSlope: 2.1412423
+      outSlope: 2.1412423
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
       time: 1
-      value: 0
+      value: 0.014953613
       inSlope: -0.5
       outSlope: -0.5
       tangentMode: 0
@@ -399,15 +409,50 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  animDuration: 0.2
-  moveDistance: 10
+  animDuration: 0.25
+  moveDistance: 20
+  highlightCanvasGroup: {fileID: 0}
+  animCurveHighlight:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.5
+      value: 0
+      inSlope: -0.5
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   disableType: 1
-  disableCanvasGroup: {fileID: 0}
+  disableCanvasGroup: {fileID: 225892791286178404}
   disableCanvasGroupAlpha: 0.5
   enableWhenInteractable:
   - {fileID: 1261600203219948}
   enableWhenNotInteractable:
   - {fileID: 1152710438380462}
+  audioOnAnimStart: 
   onAnimStart:
     m_PersistentCalls:
       m_Calls:
@@ -441,6 +486,8 @@ MonoBehaviour:
         m_CallState: 2
     m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine.CoreModule, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
+  lockOtherButtonsDuringAnim: 1
+  lockCooldownAfterAnim: 0.3
 --- !u!114 &114688726392624428
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -553,7 +600,7 @@ MonoBehaviour:
     m_TypeName: UnityEngine.UI.Button+ButtonClickedEvent, UnityEngine.UI, Version=1.0.0.0,
       Culture=neutral, PublicKeyToken=null
   transformToAnimate: {fileID: 224044678919897028}
-  animationType: 0
+  animationType: 1
   animCurveScale:
     serializedVersion: 2
     m_Curve:
@@ -622,11 +669,46 @@ MonoBehaviour:
     m_RotationOrder: 4
   animDuration: 0.2
   moveDistance: 10
-  disableType: 0
+  highlightCanvasGroup: {fileID: 0}
+  animCurveHighlight:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.5
+      value: 0
+      inSlope: -0.5
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  disableType: 1
   disableCanvasGroup: {fileID: 225890675172217520}
   disableCanvasGroupAlpha: 0.5
   enableWhenInteractable: []
   enableWhenNotInteractable: []
+  audioOnAnimStart: 
   onAnimStart:
     m_PersistentCalls:
       m_Calls:
@@ -660,6 +742,8 @@ MonoBehaviour:
         m_CallState: 2
     m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine.CoreModule, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
+  lockOtherButtonsDuringAnim: 1
+  lockCooldownAfterAnim: 0.3
 --- !u!114 &114944052801695048
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -934,6 +1018,17 @@ CanvasGroup:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1472080387511342}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!225 &225892791286178404
+CanvasGroup:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1511335951407002}
   m_Enabled: 1
   m_Alpha: 1
   m_Interactable: 1

@@ -16,9 +16,12 @@ public class SuperButton_Editor : Editor
 	GUIContent animCurveLabel = new GUIContent("Anim Curve");
 	GUIContent animDurationLabel = new GUIContent("Anim Duration");
 	GUIContent moveDistanceLabel = new GUIContent("Move Distance");
+	GUIContent highlightCanvasGroupLabel = new GUIContent("Highlight Canvas Group");
 	GUIContent disableTypeLabel = new GUIContent("Disable Type");
 	GUIContent disableCanvasGroupLabel = new GUIContent("Canvas Group To Alpha Out");
 	GUIContent disableAlphaLabel = new GUIContent("Alpha Amount");
+	GUIContent audioLabel = new GUIContent("Audio");
+	GUIContent audioOnAnimStartLabel = new GUIContent("Audio On Anim Start");
 	GUIContent lockOthersDuringAnimLabel = new GUIContent("Lock Others During Anim");
 	GUIContent lockCooldownAfterAnimLabel = new GUIContent("Lock Cooldown After Anim");
 	SuperButton button;
@@ -29,14 +32,20 @@ public class SuperButton_Editor : Editor
 		{
 			button = (SuperButton)target;
 			labelStyle.fontStyle = FontStyle.Bold;
+			labelStyle.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
 			button.transition = Selectable.Transition.None;
 		}
 
 		EditorGUILayout.Space();
 
 		EditorGUILayout.LabelField("Button", labelStyle);
-		bool interactable = EditorGUILayout.Toggle(interactableLabel, button.interactable);
-		if (interactable != button.interactable)	// Avoids it refreshing on every frame even when it hasn't changed
+
+		bool interactable;
+		EditorGUI.BeginChangeCheck();
+		{
+			interactable = EditorGUILayout.Toggle(interactableLabel, button.interactable);
+		}
+		if (EditorGUI.EndChangeCheck())	// Avoids it refreshing on every frame even when it hasn't changed
 			button.interactable = interactable;			
 
 		EditorGUILayout.Space();
@@ -61,6 +70,12 @@ public class SuperButton_Editor : Editor
 
 		EditorGUILayout.Space();
 
+		EditorGUILayout.LabelField("Highlight (Optional)", labelStyle);
+		button.highlightCanvasGroup = (CanvasGroup)EditorGUILayout.ObjectField(highlightCanvasGroupLabel, button.highlightCanvasGroup, typeof(CanvasGroup), true);
+		button.animCurveHighlight = EditorGUILayout.CurveField(animCurveLabel, button.animCurveHighlight);
+
+		EditorGUILayout.Space();
+
 		EditorGUILayout.LabelField("Disabled Effect", labelStyle);
 		button.disableType = (SuperButton.DisableTypes)EditorGUILayout.EnumPopup(disableTypeLabel, button.disableType);
 		switch (button.disableType)
@@ -80,6 +95,11 @@ public class SuperButton_Editor : Editor
 
 		EditorGUILayout.Space();
 
+		EditorGUILayout.LabelField(audioLabel, labelStyle);
+		button.audioOnAnimStart = EditorGUILayout.TextField(audioOnAnimStartLabel, button.audioOnAnimStart);
+
+		EditorGUILayout.Space();
+
 		EditorGUILayout.LabelField("Cooldown (Locks Out Other Buttons)", labelStyle);
 
 		button.lockOtherButtonsDuringAnim = EditorGUILayout.Toggle(lockOthersDuringAnimLabel, button.lockOtherButtonsDuringAnim);
@@ -87,8 +107,12 @@ public class SuperButton_Editor : Editor
 
 		SerializedProperty onAnimStart = serializedObject.FindProperty("onAnimStart");
 		EditorGUILayout.PropertyField(onAnimStart);
-		SerializedProperty onAnimFinish = serializedObject.FindProperty("onAnimFinish");
-		EditorGUILayout.PropertyField(onAnimFinish);
+
+		if (button.animationType != SuperButton.AnimationTypes.None)
+		{
+			SerializedProperty onAnimFinish = serializedObject.FindProperty("onAnimFinish");
+			EditorGUILayout.PropertyField(onAnimFinish);
+		}
 
 		if (GUI.changed)
 			serializedObject.ApplyModifiedProperties();
@@ -98,8 +122,8 @@ public class SuperButton_Editor : Editor
 
 public class SuperButton : Button
 {
-	public enum AnimationTypes { Scale, MoveUpDown, MoveLeftRight };
-	public enum DisableTypes { CanvasGroupAlpha, HierarchySwap };
+	public enum AnimationTypes { None, Scale, MoveUpDown, MoveLeftRight };
+	public enum DisableTypes { None, CanvasGroupAlpha, HierarchySwap };
 	static readonly Vector2 vec2Up = Vector2.up;
 	static readonly Vector2 vec2Right = Vector2.right;
 
@@ -124,12 +148,19 @@ public class SuperButton : Button
 	public float animDuration = 0.2f;
 	public float moveDistance = 10f;
 
+	[Header("Highlight (Optional)")]
+	public CanvasGroup highlightCanvasGroup = null;
+	public AnimationCurve animCurveHighlight = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.5f, 0f, -0.5f, 0f), new Keyframe(1f, 0f));
+
 	[Header("Disabling")]
 	public DisableTypes disableType = DisableTypes.CanvasGroupAlpha;
 	public CanvasGroup disableCanvasGroup = null;
 	[Range(0, 1)] public float disableCanvasGroupAlpha = 0.5f;
 	public GameObject[] enableWhenInteractable = null;
 	public GameObject[] enableWhenNotInteractable = null;
+
+	[Header("Audio")]
+	public string audioOnAnimStart = "UI_In";
 
 	[Header("Events")]
 	public UnityEvent onAnimStart = null;
@@ -143,11 +174,35 @@ public class SuperButton : Button
 
 	float animSpeed;
 	static float cooldownEndTime;
+	Vector3 origScale = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);	// default to ridiculous value to know if it's been set/used
+	Vector2 origAnchoredPos = new Vector2(float.MaxValue, float.MaxValue);              // default to ridiculous value to know if it's been set/used
+	Coroutine animCoroutine;
+
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+
+		RefreshInteractable(interactable);
+	}
 
 	/// <summary> Called when object/script is disabled in the hierarchy </summary>
 	protected override void OnDisable()
-	{		
-		StopAllCoroutines();
+	{
+		base.OnDisable();
+
+		if (animCoroutine != null)
+		{
+			StopCoroutine(animCoroutine);
+			animCoroutine = null;
+
+			// Reset elements to default pos/scale/etc
+			if (origScale.x < float.MaxValue - 0.1f)
+				transformToAnimate.localScale = origScale;
+			if (origAnchoredPos.x < float.MaxValue - 0.1f)
+				transformToAnimate.anchoredPosition = origAnchoredPos;
+			if (highlightCanvasGroup != null)
+				highlightCanvasGroup.alpha = animCurveHighlight.Evaluate(animCurveHighlight.keys[animCurveHighlight.length - 1].time);
+		}
 	}
 
 	/// <summary> Refreshes elements for interactable/disabled state </summary>
@@ -157,7 +212,15 @@ public class SuperButton : Button
 		switch (disableType)
 		{
 			case DisableTypes.CanvasGroupAlpha:
-				disableCanvasGroup.alpha = (_interactable ? 1.0f : disableCanvasGroupAlpha);
+				if (disableCanvasGroup != null)
+					disableCanvasGroup.alpha = (_interactable ? 1.0f : disableCanvasGroupAlpha);
+#if UNITY_EDITOR
+				else if (Application.isPlaying)
+				{
+					Debug.LogWarning("SuperButton '" + Helpers.GetFullName(transform) + "' has 'Disable Type' set to 'Canvas Group Alpha', but 'Disable Canvas Group' is not set! Switching it back to 'None'.");
+					disableType = DisableTypes.None;
+				}
+#endif
 				break;
 
 			case DisableTypes.HierarchySwap:
@@ -181,27 +244,33 @@ public class SuperButton : Button
 		if (!interactable || (Time.time < cooldownEndTime))
 			return;
 
-		if (onAnimStart != null)
-			onAnimStart.Invoke();
+		onAnimStart?.Invoke();
+
+#if FALSE
+		if (!string.IsNullOrEmpty(audioOnAnimStart))
+			AudioController.Play(audioOnAnimStart);
+#endif
 
 		animSpeed = 1f / animDuration;
 
 		if (lockOtherButtonsDuringAnim)
 			cooldownEndTime = Time.time + animDuration + 0.05f;
 
+		// Start anim if necessary
 		switch (animationType)
 		{
+			case AnimationTypes.None:
+				onAnimFinish?.Invoke();
+				break;
+
 			case AnimationTypes.Scale:
-				StartCoroutine(StartAnimScale());
+				animCoroutine = StartCoroutine(StartAnimScale());
 				break;
 
 			case AnimationTypes.MoveUpDown:
 			case AnimationTypes.MoveLeftRight:
-				StartCoroutine(StartAnimMove());
+				animCoroutine = StartCoroutine(StartAnimMove());
 				break;
-
-			default:
-				throw new UnityException("Unhandled animation type " + animationType);
 		}
 	}
 
@@ -217,13 +286,17 @@ public class SuperButton : Button
 	/// <summary> Performs the button's animation, triggering its callback when complete </summary>
 	IEnumerator StartAnimScale()
 	{
-		Vector3 origScale = transformToAnimate.localScale;
+		origScale = transformToAnimate.localScale;
 
 		float progress = 0f;
 		while (progress < 1f)
 		{
 			progress += animSpeed * Time.deltaTime;
 			transformToAnimate.localScale = origScale * animCurveScale.Evaluate(progress);
+
+			if (highlightCanvasGroup != null)
+				highlightCanvasGroup.alpha = animCurveHighlight.Evaluate(progress);
+
 			yield return null;
 		}
 
@@ -233,14 +306,18 @@ public class SuperButton : Button
 	/// <summary> Performs the button's animation, triggering its callback when complete </summary>
 	IEnumerator StartAnimMove()
 	{
-		Vector2 origPos = transformToAnimate.anchoredPosition;
+		origAnchoredPos = transformToAnimate.anchoredPosition;
 		Vector2 direction = moveDistance * ((animationType == AnimationTypes.MoveUpDown) ? vec2Up : vec2Right);
 
 		float progress = 0f;
 		while (progress < 1f)
 		{
 			progress += animSpeed * Time.deltaTime;
-			transformToAnimate.localPosition = origPos + (direction * animCurveMove.Evaluate(progress));
+			transformToAnimate.localPosition = origAnchoredPos + (direction * animCurveMove.Evaluate(progress));
+
+			if (highlightCanvasGroup != null)
+				highlightCanvasGroup.alpha = animCurveHighlight.Evaluate(progress);
+
 			yield return null;
 		}
 
